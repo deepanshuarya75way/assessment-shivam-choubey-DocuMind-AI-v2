@@ -12,6 +12,8 @@ export default function DocumentSidebar({
   documents,
   onUpload,
   onDelete,
+  onRetry,
+  retryingDocumentId,
   uploading,
   scopedDocumentIds = [],
   onToggleScope,
@@ -124,6 +126,23 @@ export default function DocumentSidebar({
             </span>
             {doc.status === "failed" && doc.error_message && (
               <p className="text-xs text-red-500 mt-1">{doc.error_message}</p>
+            )}
+            {doc.status === "failed" && onRetry && (
+              <button
+              type="button"
+              onClick ={() => onRetry(doc.id)}
+              disabled={retryingDocumentId === doc.id}
+              className="mt-2 inline-flex items-center
+          gap-1 rounded-lg border border-red-200
+          bg-red-50 px-2.5 py-1.5 text-xs font-medium
+          text-red-700 hover:bg-red-100
+          disabled:opacitiy-60 transition"
+              title="Retry processing this document"
+          >
+          {retryingDocument === doc.id
+            ? "Retring..."
+            : "retry processing"}
+              </button>
             )}
           </div>
         ))}

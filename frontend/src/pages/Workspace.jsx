@@ -8,6 +8,7 @@ import {
   listDocuments,
   listSessions,
   renameSession,
+  retryDocument,
   setSessionScope,
   streamChat,
   uploadDocuments,
@@ -68,6 +69,8 @@ export default function Workspace() {
   const [input, setInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [retryingDocumentId,
+  setRetryingDocumentId] = usestate(null);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "light");
   const [editingSessionId, setEditingSessionId] = useState(null);
@@ -211,6 +214,24 @@ export default function Workspace() {
   async function handleDeleteDocument(id) {
     await deleteDocument(id);
     refreshDocuments();
+  }
+  async function handleRetryDocument(id) {
+    setRetryingDocumentId(id);
+    setError("");
+
+    try {
+      await retryDocument(id);
+      await refreshDocuments();
+
+    } catch (e) {
+      setError(
+        e.response?.data?.detail ||
+        "could not retry document processing."
+      );
+      await refreshDocuments();
+    } finally {
+      setRetryingDocumentId(null);
+    }
   }
 
   async function handleNewSession() {
@@ -480,6 +501,8 @@ export default function Workspace() {
           documents={documents}
           onUpload={handleUpload}
           onDelete={handleDeleteDocument}
+          onRetry={handleRetryDocument}
+          retryingDocumentId={retryingDocumentId}
           uploading={uploading}
           scopedDocumentIds={scopedDocumentIds}
           onToggleScope={handleToggleScope}

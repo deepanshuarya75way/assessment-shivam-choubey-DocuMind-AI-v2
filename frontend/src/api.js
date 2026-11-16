@@ -62,6 +62,12 @@ export async function listDocuments() {
 export async function deleteDocument(id) {
   await api.delete(`/documents/${id}`);
 }
+export async function retryDocument(id) {
+  const { data } = await api.post(
+    '/documents/${id}/retry'
+  );
+  return data;
+}
 
 export async function listSessions() {
   const { data } = await api.get("/chat/sessions");

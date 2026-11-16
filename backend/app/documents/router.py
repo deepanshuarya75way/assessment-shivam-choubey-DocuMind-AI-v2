@@ -41,19 +41,28 @@ def _process_document(document_id: str, user_id: str, file_path: str, filename: 
         if doc_row is None:
             return
         try:
-            raw_docs = extract_documents(file_path, filename, ext)
-            chunks = chunk_documents(raw_docs)
-            add_document_to_index(user_id, document_id, chunks)
+            remove_document_from_index(user_id,document_id)
+
+            raw_docs=extract_documents(file_path,filename, ext)
+
+            chunks=chunk_documents(raw_docs)
+
+            add_document_to_index(user_id, document_id,chunks)
 
             doc_row.status = "ready"
             doc_row.num_chunks = len(chunks)
             doc_row.num_pages = len({d.metadata.get("page", 1) for d in raw_docs})
         except DocuMindError as e:
             doc_row.status = "failed"
+            doc_row.num_chunks=0
+            doc_row.num_pages=0
             doc_row.error_message = e.message
+
             logger.warning("Document processing failed for %s: %s", filename, e.message)
         except Exception:  # noqa: BLE001
             doc_row.status = "failed"
+            doc_row.num_chunks=0
+            doc_row.num_pages=0
             doc_row.error_message = "Unexpected error while processing this file."
             logger.exception("Unexpected error processing %s", filename)
         db.commit()
@@ -116,6 +125,70 @@ async def upload_documents(
     for d in created:
         db.refresh(d)
     return created
+
+@router.post(
+    "/{document_id}/retry",
+    response_model=schemas.DocumentOut,
+    status_code=status.HTTP_202_ACCEPTED
+)
+@limiter.limit(settings.RATE_LIMIT_UPLOAD)
+def retry_document(
+    document_id:str,
+    request:Request,
+    background_tasks:BackgroundTasks,
+    db:Session=Depends(get_db),
+    current_user:models.User=
+    Depends(get_current_user),
+):
+
+    doc_row=(
+        db.query(models.Document).filter(
+            models.Document.id==document_id,
+            models.Document.owner_id==current_user.id
+        )
+        .first()
+
+    )
+
+    if not doc_row:
+        raise HTTPException(
+            status_code=404,
+            details="Document not found"
+        )
+    if doc_row.status !="failed":
+        raise HTTPException(
+            status_code=409,
+            details="Only failed document can be retried."
+        )
+    file_path=os.path.join(
+        settings.UPLOAD_DIR,
+        current_user.id,
+        f"{document_id}.{doc_row.extension}"
+    )
+    if not os.path.isfile(file_path):
+        raise HTTPException(
+            status_code=404,
+            details="Original stored file not found."
+        )
+    doc_row.status="processing"
+    doc_row.error_message=None
+    doc_row.num_chunks=0
+    doc_row.num_pages=0
+
+    db.commit()
+    db.refresh(doc_row)
+
+    background_tasks.add_task(
+        _process_document,
+        doc_row.id,
+        current_user.id,
+        file_path,
+        doc_row.filename,
+        doc_row.extension
+    )
+
+    return doc_row
+
 
 
 @router.get("", response_model=list[schemas.DocumentOut])
