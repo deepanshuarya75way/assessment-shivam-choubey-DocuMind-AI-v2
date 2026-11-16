@@ -42,6 +42,8 @@ def _process_document(document_id: str, user_id: str, file_path: str, filename: 
             return
         try:
             remove_document_from_index(user_id,document_id)
+            #TEMPORARY TEST ERROR
+            raise RuntimeError("Testing retry functionality")
 
             raw_docs=extract_documents(file_path,filename, ext)
 

@@ -23,7 +23,9 @@ export default function DocumentSidebar({
 
   function handleFiles(fileList) {
     if (!fileList || fileList.length === 0) return;
-    onUpload(Array.from(fileList));
+    const selectedFiles =
+  Array.from(fileList);
+    onUpload(selectFiles);
   }
 
   return (
@@ -52,7 +54,11 @@ export default function DocumentSidebar({
           multiple
           accept=".pdf,.txt,.docx"
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            e.target.value = " ";
+          }}
         />
         <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-brand-100 flex items-center justify-center text-lg">
           {uploading ? (

@@ -70,7 +70,7 @@ export default function Workspace() {
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [retryingDocumentId,
-  setRetryingDocumentId] = usestate(null);
+  setRetryingDocumentId] = useState(null);
   const [error, setError] = useState("");
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "light");
   const [editingSessionId, setEditingSessionId] = useState(null);
@@ -199,13 +199,17 @@ export default function Workspace() {
   }, [activeSessionId, sessions]);
 
   async function handleUpload(files) {
+    if(!files || files.length === 0) return;
     setUploading(true);
     setError("");
     try {
       await uploadDocuments(files);
       await refreshDocuments();
     } catch (e) {
-      setError(e.response?.data?.detail || "Upload failed.");
+      console.error("Document upload error :" ,e);
+      setError( 
+        e.response?.data?.detail || e.message || "upload failed."
+      );
     } finally {
       setUploading(false);
     }
@@ -501,8 +505,6 @@ export default function Workspace() {
           documents={documents}
           onUpload={handleUpload}
           onDelete={handleDeleteDocument}
-          onRetry={handleRetryDocument}
-          retryingDocumentId={retryingDocumentId}
           uploading={uploading}
           scopedDocumentIds={scopedDocumentIds}
           onToggleScope={handleToggleScope}

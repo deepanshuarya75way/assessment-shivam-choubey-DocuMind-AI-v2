@@ -47,10 +47,11 @@ export async function fetchMe() {
 
 export async function uploadDocuments(files) {
   const form = new FormData();
-  for (const f of files) form.append("files", f);
-  const { data } = await api.post("/documents/upload", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  for (const file of files) {
+    form.append("files, file");
+  } 
+  const { data } = await api.post("/documents/upload", form); 
+   
   return data;
 }
 
